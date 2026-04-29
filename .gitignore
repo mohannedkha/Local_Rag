@@ -13,8 +13,8 @@ data/raw/
 data/processed/
 data/chunks/
 
-# Database (generated at runtime)
-db/
+# Database (generated at runtime — root-level only, not src/db/)
+/db/
 
 # Env
 .env

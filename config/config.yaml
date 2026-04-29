@@ -1,7 +1,9 @@
 ollama:
   base_url: "http://localhost:11434"
   llm_model: "llama3.2"
-  embed_model: "nomic-embed-text"
+  # mxbai-embed-large: best Ollama retrieval model (MTEB 64.68), outperforms nomic-embed-text
+  # on long documents and semantic depth. Pull with: ollama pull mxbai-embed-large
+  embed_model: "mxbai-embed-large"
   temperature: 0.1
   context_window: 8192
 
@@ -9,43 +11,45 @@ ingestion:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
   chunks_dir: "data/chunks"
-  # PDF conversion backend: "pymupdf4llm" or "marker"
   pdf_backend: "pymupdf4llm"
 
 chunking:
-  strategy: "semantic"          # "semantic" | "recursive" | "fixed"
-  chunk_size: 512               # target tokens per chunk
-  chunk_overlap: 64             # overlap between chunks in tokens
-  # Semantic chunking: similarity threshold to break a new chunk (0.0–1.0)
+  # Parent-child strategy: child chunks retrieved for precision,
+  # parent chunks returned as LLM context to preserve document structure.
+  strategy: "semantic"            # "semantic" | "recursive" | "fixed"
+
+  # Child chunks: small, precise — used for vector search
+  child_chunk_size: 256           # tokens
+  child_chunk_overlap: 32         # tokens
+
+  # Parent chunks: large sections — returned as context to LLM
+  parent_chunk_size: 1024         # tokens
+  parent_chunk_overlap: 64        # tokens
+
   semantic_threshold: 0.5
-  min_chunk_size: 100           # discard chunks smaller than this (tokens)
+  min_chunk_size: 80              # discard child chunks smaller than this
 
 vector_store:
   persist_dir: "db"
-  collection_name: "documents"
-  distance_metric: "cosine"     # "cosine" | "l2" | "ip"
-  top_k: 5                      # default number of results to retrieve
-  # MMR diversity factor (0 = pure similarity, 1 = pure diversity)
+  collection_name: "doc_children"       # child chunks (embedded)
+  parent_collection: "doc_parents"      # parent sections (text store)
+  distance_metric: "cosine"
+  top_k: 5                              # child chunks to retrieve
   mmr_lambda: 0.5
 
 memory:
   persist_dir: "db"
   conversation_collection: "conversation_memory"
-  # Short-term: keep last N turns in context
   short_term_window: 10
-  # Long-term: store summaries when conversation exceeds this many turns
   long_term_threshold: 20
-  # Number of long-term memories to inject into each query
   long_term_top_k: 3
 
 rag:
-  # System prompt template
   system_prompt: |
     You are a helpful assistant with access to a private knowledge base.
-    Answer questions using only the provided context. If the context does
-    not contain enough information to answer, say so clearly.
+    Answer questions using only the provided document context.
+    Always cite the source document name when referencing information.
+    If the context does not contain enough information to answer, say so clearly.
     Be concise and precise.
-  # Reranker: "none" | "cross_encoder"
   reranker: "none"
-  # Maximum context tokens to send to LLM
   max_context_tokens: 4096
