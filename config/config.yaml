@@ -4,7 +4,7 @@ ollama:
   # jina-embeddings-v4: 32,768-token context window, top-5 MTEB retrieval.
   # Non-commercial license only. Pull with:
   #   ollama pull k----n/jina-embeddings-v4-text-retrieval-F16
-  embed_model: "k----n/jina-embeddings-v4-text-retrieval-F16"
+  embed_model: "k----n/jina-embeddings-v4-text-retrieval-F16:latest"
   temperature: 0.1
   context_window: 8192
 
