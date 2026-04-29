@@ -1,7 +1,8 @@
 """Generate embeddings via Ollama.
 
-Default model: bge-m3 — 8192-token context window, strong MTEB retrieval
-scores, ideal for large document RAG. Pull with: ollama pull bge-m3
+Default model: jina-embeddings-v4 — 32,768-token context window, top-5 MTEB
+retrieval (July 2025). Pull with:
+  ollama pull k----n/jina-embeddings-v4-text-retrieval-F16
 """
 
 from __future__ import annotations
@@ -9,9 +10,9 @@ from __future__ import annotations
 import tiktoken
 import ollama
 
-# bge-m3 supports 8192 tokens. We cap at 8000 to leave a safe margin
-# against tokenizer differences between tiktoken and the model's tokenizer.
-_EMBED_MAX_TOKENS = 8000
+# jina-embeddings-v4 supports 32,768 tokens.
+# Cap at 30,000 to leave a safe margin against tokenizer differences.
+_EMBED_MAX_TOKENS = 30000
 _ENC = tiktoken.get_encoding("cl100k_base")
 
 

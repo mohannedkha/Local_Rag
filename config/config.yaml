@@ -1,10 +1,10 @@
 ollama:
   base_url: "http://localhost:11434"
   llm_model: "llama3.2"
-  # bge-m3: 8192-token context window (16x more than mxbai-embed-large's 512).
-  # Strong MTEB retrieval scores, supports dense+sparse+multi-vector retrieval.
-  # Pull with: ollama pull bge-m3
-  embed_model: "bge-m3"
+  # jina-embeddings-v4: 32,768-token context window, top-5 MTEB retrieval.
+  # Non-commercial license only. Pull with:
+  #   ollama pull k----n/jina-embeddings-v4-text-retrieval-F16
+  embed_model: "k----n/jina-embeddings-v4-text-retrieval-F16"
   temperature: 0.1
   context_window: 8192
 
@@ -19,12 +19,12 @@ chunking:
   # parent chunks returned as LLM context to preserve document structure.
   strategy: "semantic"            # "semantic" | "recursive" | "fixed"
 
-  # Child chunks: used for vector search — larger now that bge-m3 supports 8192 tokens
-  child_chunk_size: 512           # tokens
-  child_chunk_overlap: 64         # tokens
+  # Child chunks: used for vector search — jina-v4 handles up to 32K tokens
+  child_chunk_size: 1024          # tokens
+  child_chunk_overlap: 128        # tokens
 
-  # Parent chunks: returned as LLM context — rich full sections
-  parent_chunk_size: 2048         # tokens
+  # Parent chunks: returned as LLM context — keep within LLM's context window
+  parent_chunk_size: 2048         # tokens (5 × 2048 fits llama3.2's 8K window)
   parent_chunk_overlap: 128       # tokens
 
   semantic_threshold: 0.5
