@@ -1,9 +1,10 @@
 ollama:
   base_url: "http://localhost:11434"
   llm_model: "llama3.2"
-  # mxbai-embed-large: best Ollama retrieval model (MTEB 64.68), outperforms nomic-embed-text
-  # on long documents and semantic depth. Pull with: ollama pull mxbai-embed-large
-  embed_model: "mxbai-embed-large"
+  # jina-embeddings-v4: 32,768-token context window, top-5 MTEB retrieval.
+  # Non-commercial license only. Pull with:
+  #   ollama pull k----n/jina-embeddings-v4-text-retrieval-F16
+  embed_model: "k----n/jina-embeddings-v4-text-retrieval-F16:latest"
   temperature: 0.1
   context_window: 8192
 
@@ -18,13 +19,13 @@ chunking:
   # parent chunks returned as LLM context to preserve document structure.
   strategy: "semantic"            # "semantic" | "recursive" | "fixed"
 
-  # Child chunks: small, precise — used for vector search
-  child_chunk_size: 256           # tokens
-  child_chunk_overlap: 32         # tokens
+  # Child chunks: used for vector search — jina-v4 handles up to 32K tokens
+  child_chunk_size: 1024          # tokens
+  child_chunk_overlap: 128        # tokens
 
-  # Parent chunks: large sections — returned as context to LLM
-  parent_chunk_size: 1024         # tokens
-  parent_chunk_overlap: 64        # tokens
+  # Parent chunks: returned as LLM context — keep within LLM's context window
+  parent_chunk_size: 2048         # tokens (5 × 2048 fits llama3.2's 8K window)
+  parent_chunk_overlap: 128       # tokens
 
   semantic_threshold: 0.5
   min_chunk_size: 80              # discard child chunks smaller than this
