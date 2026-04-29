@@ -19,8 +19,9 @@ chunking:
   strategy: "semantic"            # "semantic" | "recursive" | "fixed"
 
   # Child chunks: small, precise — used for vector search
-  child_chunk_size: 256           # tokens
-  child_chunk_overlap: 32         # tokens
+  # mxbai-embed-large limit is 512 tokens; stay well below it
+  child_chunk_size: 200           # tokens
+  child_chunk_overlap: 24         # tokens
 
   # Parent chunks: large sections — returned as context to LLM
   parent_chunk_size: 1024         # tokens
