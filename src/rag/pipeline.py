@@ -1,8 +1,13 @@
-"""Main RAG pipeline: wires together retrieval, memory, and LLM generation."""
+"""Main RAG pipeline: retrieval -> memory -> LLM generation.
+
+Uses parent-child retrieval: child chunks are searched for precision,
+but the full parent section is passed to the LLM so it reads coherent
+document context rather than scattered fragments.
+"""
 
 from __future__ import annotations
 
-from typing import Generator, Optional
+from typing import Generator
 
 from src.db.vector_store import VectorStore
 from src.llm.ollama_client import OllamaClient
@@ -34,43 +39,41 @@ class RAGPipeline:
     # Public API
     # ------------------------------------------------------------------
 
-    def query(self, user_input: str, stream: bool = False):
+    def query(
+        self, user_input: str, stream: bool = False
+    ) -> str | Generator[str, None, None]:
         """
-        Run a full RAG turn:
-          1. Retrieve relevant chunks (MMR or plain similarity).
+        Full RAG turn:
+          1. Retrieve relevant parent sections (via child-chunk MMR search).
           2. Inject long-term memories.
           3. Build prompt with short-term history.
-          4. Generate answer via LLM.
-          5. Store the turn in memory.
+          4. Generate answer (streaming or not).
+          5. Store turn in memory.
+
+        Returns a string or a generator of string tokens.
+        Also returns source_refs as a side-effect via self.last_sources.
         """
-        # 1. Retrieve
+        # 1. Retrieve (returns parent-level context + snippet metadata)
         if self.use_mmr:
             hits = self.vector_store.mmr_query(
-                user_input,
-                top_k=self.top_k,
-                mmr_lambda=self.mmr_lambda,
+                user_input, top_k=self.top_k, mmr_lambda=self.mmr_lambda
             )
         else:
             hits = self.vector_store.query(user_input, top_k=self.top_k)
 
+        self.last_sources = hits  # expose for UI
+
         context = self._build_context(hits)
-
-        # 2. Long-term memory
         lt_memory = self.memory.format_long_term(user_input)
-
-        # 3. Conversation history
         history = self.memory.format_history()
-
-        # 4. Build messages
         messages = self._build_messages(user_input, context, lt_memory, history)
 
-        # 5. Generate
+        # 2. Generate
         response = self.llm.chat(messages, stream=stream)
 
         if stream:
             return self._stream_and_store(user_input, response)
 
-        # Store turn in memory
         self.memory.add_turn("user", user_input)
         self.memory.add_turn("assistant", response)
         return response
@@ -80,10 +83,13 @@ class RAGPipeline:
     # ------------------------------------------------------------------
 
     def _build_context(self, hits: list[dict]) -> str:
+        """Build context string from parent-level hits, with source labels."""
         parts = []
         for i, hit in enumerate(hits, 1):
-            src = hit["metadata"].get("source", "unknown")
-            parts.append(f"[{i}] (source: {src})\n{hit['text']}")
+            src = hit.get("source", "unknown")
+            sec = hit.get("section_index", "")
+            header = f"[{i}] Document: {src}" + (f", section {sec}" if sec != "" else "")
+            parts.append(f"{header}\n{hit['context_text']}")
         return "\n\n---\n\n".join(parts)
 
     def _build_messages(
@@ -93,30 +99,27 @@ class RAGPipeline:
         lt_memory: str,
         history: str,
     ) -> list[dict]:
-        system = self.system_prompt.strip()
-
-        user_content_parts = []
+        parts: list[str] = []
         if lt_memory:
-            user_content_parts.append(lt_memory)
+            parts.append(lt_memory)
         if history:
-            user_content_parts.append(f"Conversation so far:\n{history}")
+            parts.append(f"Conversation so far:\n{history}")
         if context:
-            user_content_parts.append(f"Knowledge base context:\n{context}")
-        user_content_parts.append(f"Question: {user_input}")
+            parts.append(f"Knowledge base context:\n{context}")
+        parts.append(f"Question: {user_input}")
 
         return [
-            {"role": "system", "content": system},
-            {"role": "user", "content": "\n\n".join(user_content_parts)},
+            {"role": "system", "content": self.system_prompt.strip()},
+            {"role": "user", "content": "\n\n".join(parts)},
         ]
 
     def _stream_and_store(
         self, user_input: str, generator: Generator[str, None, None]
     ) -> Generator[str, None, None]:
-        """Yield streaming tokens, then persist the full response to memory."""
         collected: list[str] = []
         for token in generator:
             collected.append(token)
             yield token
-        full_response = "".join(collected)
+        full = "".join(collected)
         self.memory.add_turn("user", user_input)
-        self.memory.add_turn("assistant", full_response)
+        self.memory.add_turn("assistant", full)

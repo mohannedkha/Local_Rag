@@ -13,14 +13,17 @@ chromadb>=0.5.0
 # LLM / Ollama
 ollama>=0.3.0
 
+# Frontend
+streamlit>=1.35.0
+
 # Config & utilities
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
-rich>=13.7.0          # pretty CLI output
+rich>=13.7.0
 tqdm>=4.66.0
 
-# Optional: better PDF conversion (heavier, GPU optional)
+# Optional: better PDF conversion (heavier, requires GPU for speed)
 # marker-pdf>=0.2.0
 
 # Optional: cross-encoder reranker
-# sentence-transformers already covers this
+# sentence-transformers already includes cross-encoder support
