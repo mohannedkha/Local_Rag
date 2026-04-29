@@ -1,14 +1,17 @@
-"""Generate embeddings via Ollama (mxbai-embed-large or any embed model)."""
+"""Generate embeddings via Ollama.
+
+Default model: bge-m3 — 8192-token context window, strong MTEB retrieval
+scores, ideal for large document RAG. Pull with: ollama pull bge-m3
+"""
 
 from __future__ import annotations
 
 import tiktoken
 import ollama
 
-# mxbai-embed-large has a 512-token context limit.
-# We truncate conservatively to 480 to stay clear of the boundary
-# regardless of tokenizer differences between tiktoken and Ollama.
-_EMBED_MAX_TOKENS = 480
+# bge-m3 supports 8192 tokens. We cap at 8000 to leave a safe margin
+# against tokenizer differences between tiktoken and the model's tokenizer.
+_EMBED_MAX_TOKENS = 8000
 _ENC = tiktoken.get_encoding("cl100k_base")
 
 

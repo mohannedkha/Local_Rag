@@ -1,9 +1,10 @@
 ollama:
   base_url: "http://localhost:11434"
   llm_model: "llama3.2"
-  # mxbai-embed-large: best Ollama retrieval model (MTEB 64.68), outperforms nomic-embed-text
-  # on long documents and semantic depth. Pull with: ollama pull mxbai-embed-large
-  embed_model: "mxbai-embed-large"
+  # bge-m3: 8192-token context window (16x more than mxbai-embed-large's 512).
+  # Strong MTEB retrieval scores, supports dense+sparse+multi-vector retrieval.
+  # Pull with: ollama pull bge-m3
+  embed_model: "bge-m3"
   temperature: 0.1
   context_window: 8192
 
@@ -18,14 +19,13 @@ chunking:
   # parent chunks returned as LLM context to preserve document structure.
   strategy: "semantic"            # "semantic" | "recursive" | "fixed"
 
-  # Child chunks: small, precise — used for vector search
-  # mxbai-embed-large limit is 512 tokens; stay well below it
-  child_chunk_size: 200           # tokens
-  child_chunk_overlap: 24         # tokens
+  # Child chunks: used for vector search — larger now that bge-m3 supports 8192 tokens
+  child_chunk_size: 512           # tokens
+  child_chunk_overlap: 64         # tokens
 
-  # Parent chunks: large sections — returned as context to LLM
-  parent_chunk_size: 1024         # tokens
-  parent_chunk_overlap: 64        # tokens
+  # Parent chunks: returned as LLM context — rich full sections
+  parent_chunk_size: 2048         # tokens
+  parent_chunk_overlap: 128       # tokens
 
   semantic_threshold: 0.5
   min_chunk_size: 80              # discard child chunks smaller than this
